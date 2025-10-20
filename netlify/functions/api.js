@@ -1,64 +1,120 @@
-const data = {}; // Datos en memoria
+const { json } = require('micro');
 
-exports.handler = async (event) => {
-  const { httpMethod, path } = event;
+// Datos en memoria (simulando base de datos)
+let database = {
+  users: [],
+  posts: [], 
+  products: []
+};
+
+// Función para limitar a 100 registros
+function limitRecords(collection, newItem) {
+  if (database[collection].length >= 100) {
+    database[collection].shift(); // Eliminar el más antiguo
+  }
+  database[collection].push(newItem);
+}
+
+module.exports = async (req, res) => {
+  // Configurar CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.end();
+  }
+
+  const { method, url } = req;
+  const path = url.split('?')[0];
   const pathParts = path.split('/').filter(part => part);
-  
-  if (pathParts[0] !== 'api') {
-    return { statusCode: 404, body: 'Not Found' };
+
+  // Verificar que la ruta empiece con /api/
+  if (pathParts[0] !== 'api' || pathParts.length < 2) {
+    res.statusCode = 404;
+    return { error: 'Ruta no encontrada. Use /api/collection' };
   }
 
   const collection = pathParts[1];
   const id = pathParts[2];
 
-  switch (httpMethod) {
-    case 'GET':
-      if (id) {
-        const item = (data[collection] || []).find(item => item.id === id);
-        return item 
-          ? { statusCode: 200, body: JSON.stringify(item) }
-          : { statusCode: 404, body: 'Not Found' };
-      } else {
-        return { statusCode: 200, body: JSON.stringify(data[collection] || []) };
-      }
+  // Verificar si la colección existe
+  if (!database[collection]) {
+    database[collection] = [];
+  }
 
-    case 'POST':
-      const newItem = { 
-        id: Date.now().toString(), 
-        ...JSON.parse(event.body),
-        createdAt: new Date().toISOString()
-      };
-      
-      if (!data[collection]) data[collection] = [];
-      
-      // Limitar a 100 registros
-      if (data[collection].length >= 100) {
-        data[collection].shift();
-      }
-      
-      data[collection].push(newItem);
-      return { statusCode: 201, body: JSON.stringify(newItem) };
+  try {
+    switch (method) {
+      case 'GET':
+        if (id) {
+          // GET por ID
+          const item = database[collection].find(item => item.id === id);
+          if (!item) {
+            res.statusCode = 404;
+            return { error: 'Item no encontrado' };
+          }
+          return item;
+        } else {
+          // GET todos
+          return database[collection];
+        }
 
-    case 'PUT':
-      if (!id) return { statusCode: 400, body: 'ID required' };
-      
-      const index = (data[collection] || []).findIndex(item => item.id === id);
-      if (index === -1) return { statusCode: 404, body: 'Not Found' };
-      
-      data[collection][index] = { 
-        ...data[collection][index], 
-        ...JSON.parse(event.body),
-        updatedAt: new Date().toISOString()
-      };
-      return { statusCode: 200, body: JSON.stringify(data[collection][index]) };
+      case 'POST':
+        const postData = await json(req);
+        const newId = Date.now().toString();
+        const newItem = {
+          id: newId,
+          ...postData,
+          createdAt: new Date().toISOString()
+        };
+        
+        limitRecords(collection, newItem);
+        res.statusCode = 201;
+        return newItem;
 
-    case 'DELETE':
-      if (!id) return { statusCode: 400, body: 'ID required' };
-      
-      data[collection] = (data[collection] || []).filter(item => item.id !== id);
-      return { statusCode: 200, body: JSON.stringify({ deleted: true }) };
+      case 'PUT':
+        if (!id) {
+          res.statusCode = 400;
+          return { error: 'ID requerido' };
+        }
+        
+        const putData = await json(req);
+        const index = database[collection].findIndex(item => item.id === id);
+        
+        if (index === -1) {
+          res.statusCode = 404;
+          return { error: 'Item no encontrado' };
+        }
 
-    default:
-      return { statusCode: 405, body: 'Method Not Allowed' };
+        database[collection][index] = {
+          ...database[collection][index],
+          ...putData,
+          updatedAt: new Date().toISOString()
+        };
+        
+        return database[collection][index];
+
+      case 'DELETE':
+        if (!id) {
+          res.statusCode = 400;
+          return { error: 'ID requerido' };
+        }
+
+        const deleteIndex = database[collection].findIndex(item => item.id === id);
+        if (deleteIndex === -1) {
+          res.statusCode = 404;
+          return { error: 'Item no encontrado' };
+        }
+
+        const deletedItem = database[collection].splice(deleteIndex, 1)[0];
+        return { deleted: true, item: deletedItem };
+
+      default:
+        res.statusCode = 405;
+        return { error: 'Método no permitido' };
+    }
+  } catch (error) {
+    res.statusCode = 500;
+    return { error: error.message };
   }
 };
