@@ -1,85 +1,137 @@
-class SimpleAPI {
-  constructor() {
-    this.baseURL = window.location.origin;
-    this.maxRecords = 100;
-  }
-
-  async loadData() {
-    try {
-      const response = await fetch(`${this.baseURL}/data/db.json`);
-      return await response.json();
-    } catch (error) {
-      console.error('Error loading data:', error);
-      return {};
-    }
-  }
-
-  async saveData(data) {
-    // En un entorno real, esto se conectaría con GitHub Actions
-    // Por ahora, solo guardamos en localStorage para testing
-    localStorage.setItem('mockapi_data', JSON.stringify(data));
-    return { success: true };
-  }
-
-  async get(collection) {
-    const data = await this.loadData();
-    return data[collection] || [];
-  }
-
-  async post(collection, item) {
-    const data = await this.loadData();
-    
-    if (!data[collection]) {
-      data[collection] = [];
-    }
-
-    // Generar ID único
-    const id = Date.now().toString();
-    const newItem = { id, ...item, createdAt: new Date().toISOString() };
-
-    // Limitar a 100 registros
-    if (data[collection].length >= this.maxRecords) {
-      data[collection].shift(); // Eliminar el más antiguo
-    }
-
-    data[collection].push(newItem);
-    
-    await this.saveData(data);
-    return newItem;
-  }
-
-  async put(collection, id, updates) {
-    const data = await this.loadData();
-    
-    if (data[collection]) {
-      const index = data[collection].findIndex(item => item.id === id);
-      if (index !== -1) {
-        data[collection][index] = { 
-          ...data[collection][index], 
-          ...updates,
-          updatedAt: new Date().toISOString()
+class BszNubeAPI {
+    constructor() {
+        this.baseURL = 'https://bsznubeapi.github.io';
+        this.jsonBinConfig = {
+            binId: '68f66c28d0ea881f40aed3bd',
+            apiKey: '$2a$10$zBWrcQ9BKnHeMj9ijUB/ie0d5wDkEVuTCqmTgYwLVeLrtGDnvUBm.'
         };
-        await this.saveData(data);
-        return data[collection][index];
-      }
+        this.maxRecords = 100;
     }
-    return null;
-  }
 
-  async delete(collection, id) {
-    const data = await this.loadData();
-    
-    if (data[collection]) {
-      const index = data[collection].findIndex(item => item.id === id);
-      if (index !== -1) {
-        const deleted = data[collection].splice(index, 1)[0];
-        await this.saveData(data);
-        return deleted;
-      }
+    // Método para obtener datos de JSONBin
+    async getFromJSONBin(collection) {
+        try {
+            const response = await fetch(`https://api.jsonbin.io/v3/b/${this.jsonBinConfig.binId}`, {
+                headers: { 
+                    'X-Master-Key': this.jsonBinConfig.apiKey
+                }
+            });
+            
+            if (!response.ok) throw new Error('Error fetching data');
+            
+            const data = await response.json();
+            return data.record[collection] || [];
+        } catch (error) {
+            console.error('Error con JSONBin, usando datos locales:', error);
+            // Fallback a datos locales
+            const localResponse = await fetch(`${this.baseURL}/data/db.json`);
+            const localData = await localResponse.json();
+            return localData[collection] || [];
+        }
     }
-    return null;
-  }
+
+    // Método para guardar en JSONBin
+    async saveToJSONBin(collection, data) {
+        try {
+            // Primero obtener datos actuales
+            const currentResponse = await fetch(`https://api.jsonbin.io/v3/b/${this.jsonBinConfig.binId}`, {
+                headers: { 
+                    'X-Master-Key': this.jsonBinConfig.apiKey
+                }
+            });
+            
+            const currentData = await currentResponse.json();
+            const updatedData = {
+                ...currentData.record,
+                [collection]: data
+            };
+
+            // Guardar datos actualizados
+            await fetch(`https://api.jsonbin.io/v3/b/${this.jsonBinConfig.binId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Master-Key': this.jsonBinConfig.apiKey
+                },
+                body: JSON.stringify(updatedData)
+            });
+            
+            return true;
+        } catch (error) {
+            console.error('Error saving to JSONBin:', error);
+            return false;
+        }
+    }
+
+    // GET - Obtener todos los items de una colección
+    async get(collection) {
+        return await this.getFromJSONBin(collection);
+    }
+
+    // POST - Crear nuevo item
+    async post(collection, item) {
+        const currentData = await this.getFromJSONBin(collection);
+        
+        const newItem = {
+            id: Date.now().toString(),
+            ...item,
+            createdAt: new Date().toISOString()
+        };
+
+        // Limitar a 100 registros
+        const updatedData = [...currentData, newItem];
+        if (updatedData.length > this.maxRecords) {
+            updatedData.shift(); // Eliminar el más antiguo
+        }
+
+        await this.saveToJSONBin(collection, updatedData);
+        return newItem;
+    }
+
+    // PUT - Actualizar item existente
+    async put(collection, id, updates) {
+        const currentData = await this.getFromJSONBin(collection);
+        const index = currentData.findIndex(item => item.id === id);
+        
+        if (index === -1) {
+            throw new Error('Item no encontrado');
+        }
+
+        currentData[index] = {
+            ...currentData[index],
+            ...updates,
+            updatedAt: new Date().toISOString()
+        };
+
+        await this.saveToJSONBin(collection, currentData);
+        return currentData[index];
+    }
+
+    // DELETE - Eliminar item
+    async delete(collection, id) {
+        const currentData = await this.getFromJSONBin(collection);
+        const filteredData = currentData.filter(item => item.id !== id);
+        
+        if (filteredData.length === currentData.length) {
+            throw new Error('Item no encontrado');
+        }
+
+        await this.saveToJSONBin(collection, filteredData);
+        return { deleted: true, id };
+    }
+
+    // GET por ID - Obtener item específico
+    async getById(collection, id) {
+        const data = await this.getFromJSONBin(collection);
+        const item = data.find(item => item.id === id);
+        
+        if (!item) {
+            throw new Error('Item no encontrado');
+        }
+        
+        return item;
+    }
 }
 
 // Crear instancia global
-window.mockAPI = new SimpleAPI();
+window.bszAPI = new BszNubeAPI();
