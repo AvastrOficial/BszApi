@@ -8,8 +8,8 @@ class BszNubeAPI {
         this.maxRecords = 100;
     }
 
-    // Método para obtener datos de JSONBin
-    async getFromJSONBin(collection) {
+    // Método mejorado para obtener datos
+    async getFromJSONBin() {
         try {
             const response = await fetch(`https://api.jsonbin.io/v3/b/${this.jsonBinConfig.binId}`, {
                 headers: { 
@@ -20,42 +20,26 @@ class BszNubeAPI {
             if (!response.ok) throw new Error('Error fetching data');
             
             const data = await response.json();
-            return data.record[collection] || [];
+            return data.record || {};
         } catch (error) {
-            console.error('Error con JSONBin, usando datos locales:', error);
+            console.error('Error con JSONBin:', error);
             // Fallback a datos locales
             const localResponse = await fetch(`${this.baseURL}/data/db.json`);
-            const localData = await localResponse.json();
-            return localData[collection] || [];
+            return await localResponse.json();
         }
     }
 
     // Método para guardar en JSONBin
-    async saveToJSONBin(collection, data) {
+    async saveToJSONBin(data) {
         try {
-            // Primero obtener datos actuales
-            const currentResponse = await fetch(`https://api.jsonbin.io/v3/b/${this.jsonBinConfig.binId}`, {
-                headers: { 
-                    'X-Master-Key': this.jsonBinConfig.apiKey
-                }
-            });
-            
-            const currentData = await currentResponse.json();
-            const updatedData = {
-                ...currentData.record,
-                [collection]: data
-            };
-
-            // Guardar datos actualizados
             await fetch(`https://api.jsonbin.io/v3/b/${this.jsonBinConfig.binId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-Master-Key': this.jsonBinConfig.apiKey
                 },
-                body: JSON.stringify(updatedData)
+                body: JSON.stringify(data)
             });
-            
             return true;
         } catch (error) {
             console.error('Error saving to JSONBin:', error);
@@ -63,66 +47,169 @@ class BszNubeAPI {
         }
     }
 
-    // GET - Obtener todos los items de una colección
-    async get(collection) {
-        return await this.getFromJSONBin(collection);
+    // ✅ NUEVO: Crear colección personalizada
+    async createCollection(collectionName, initialData = []) {
+        const allData = await this.getFromJSONBin();
+        
+        if (!allData[collectionName]) {
+            allData[collectionName] = initialData;
+            await this.saveToJSONBin(allData);
+            return { success: true, message: `Colección ${collectionName} creada` };
+        }
+        return { success: false, message: `La colección ${collectionName} ya existe` };
     }
 
-    // POST - Crear nuevo item
-    async post(collection, item) {
-        const currentData = await this.getFromJSONBin(collection);
+    // ✅ NUEVO: Agregar item con estructura personalizada
+    async addCustomItem(collection, customItem) {
+        const allData = await this.getFromJSONBin();
         
-        const newItem = {
-            id: Date.now().toString(),
-            ...item,
-            createdAt: new Date().toISOString()
-        };
+        if (!allData[collection]) {
+            allData[collection] = [];
+        }
+
+        // Generar ID si no existe
+        if (!customItem.id) {
+            customItem.id = Date.now().toString();
+        }
+
+        // Agregar timestamp
+        if (!customItem.createdAt) {
+            customItem.createdAt = new Date().toISOString();
+        }
 
         // Limitar a 100 registros
-        const updatedData = [...currentData, newItem];
-        if (updatedData.length > this.maxRecords) {
-            updatedData.shift(); // Eliminar el más antiguo
+        if (allData[collection].length >= this.maxRecords) {
+            allData[collection].shift();
         }
 
-        await this.saveToJSONBin(collection, updatedData);
-        return newItem;
+        allData[collection].push(customItem);
+        await this.saveToJSONBin(allData);
+        return customItem;
     }
 
-    // PUT - Actualizar item existente
-    async put(collection, id, updates) {
-        const currentData = await this.getFromJSONBin(collection);
-        const index = currentData.findIndex(item => item.id === id);
+    // ✅ NUEVO: Agregar múltiples items
+    async addMultipleItems(collection, items) {
+        const allData = await this.getFromJSONBin();
         
-        if (index === -1) {
-            throw new Error('Item no encontrado');
+        if (!allData[collection]) {
+            allData[collection] = [];
         }
 
-        currentData[index] = {
-            ...currentData[index],
+        const newItems = items.map(item => ({
+            id: item.id || Date.now().toString() + Math.random().toString(36).substr(2, 5),
+            createdAt: new Date().toISOString(),
+            ...item
+        }));
+
+        // Combinar y limitar a 100 registros
+        allData[collection] = [...allData[collection], ...newItems];
+        if (allData[collection].length > this.maxRecords) {
+            allData[collection] = allData[collection].slice(-this.maxRecords);
+        }
+
+        await this.saveToJSONBin(allData);
+        return newItems;
+    }
+
+    // ✅ NUEVO: Buscar items por campo específico
+    async findByField(collection, field, value) {
+        const allData = await this.getFromJSONBin();
+        const collectionData = allData[collection] || [];
+        
+        return collectionData.filter(item => item[field] === value);
+    }
+
+    // ✅ NUEVO: Actualizar campo específico
+    async updateField(collection, id, field, value) {
+        const allData = await this.getFromJSONBin();
+        
+        if (!allData[collection]) {
+            throw new Error(`Colección ${collection} no existe`);
+        }
+
+        const index = allData[collection].findIndex(item => item.id === id);
+        if (index === -1) {
+            throw new Error(`ID ${id} no encontrado`);
+        }
+
+        allData[collection][index][field] = value;
+        allData[collection][index].updatedAt = new Date().toISOString();
+        
+        await this.saveToJSONBin(allData);
+        return allData[collection][index];
+    }
+
+    // ✅ NUEVO: Obtener todas las colecciones
+    async getCollections() {
+        const allData = await this.getFromJSONBin();
+        return Object.keys(allData);
+    }
+
+    // ✅ NUEVO: Eliminar colección completa
+    async deleteCollection(collection) {
+        const allData = await this.getFromJSONBin();
+        
+        if (allData[collection]) {
+            delete allData[collection];
+            await this.saveToJSONBin(allData);
+            return { success: true, message: `Colección ${collection} eliminada` };
+        }
+        
+        return { success: false, message: `Colección ${collection} no existe` };
+    }
+
+    // Métodos originales (mejorados)
+    async get(collection) {
+        const allData = await this.getFromJSONBin();
+        return allData[collection] || [];
+    }
+
+    async post(collection, item) {
+        return await this.addCustomItem(collection, item);
+    }
+
+    async put(collection, id, updates) {
+        const allData = await this.getFromJSONBin();
+        
+        if (!allData[collection]) {
+            throw new Error(`Colección ${collection} no existe`);
+        }
+
+        const index = allData[collection].findIndex(item => item.id === id);
+        if (index === -1) {
+            throw new Error(`ID ${id} no encontrado`);
+        }
+
+        allData[collection][index] = {
+            ...allData[collection][index],
             ...updates,
             updatedAt: new Date().toISOString()
         };
 
-        await this.saveToJSONBin(collection, currentData);
-        return currentData[index];
+        await this.saveToJSONBin(allData);
+        return allData[collection][index];
     }
 
-    // DELETE - Eliminar item
     async delete(collection, id) {
-        const currentData = await this.getFromJSONBin(collection);
-        const filteredData = currentData.filter(item => item.id !== id);
+        const allData = await this.getFromJSONBin();
         
-        if (filteredData.length === currentData.length) {
-            throw new Error('Item no encontrado');
+        if (!allData[collection]) {
+            throw new Error(`Colección ${collection} no existe`);
         }
 
-        await this.saveToJSONBin(collection, filteredData);
+        const filteredData = allData[collection].filter(item => item.id !== id);
+        
+        if (filteredData.length === allData[collection].length) {
+            throw new Error(`ID ${id} no encontrado`);
+        }
+
+        allData[collection] = filteredData;
+        await this.saveToJSONBin(allData);
         return { deleted: true, id };
     }
 
-    // GET por ID - Obtener item específico
     async getById(collection, id) {
-        const data = await this.getFromJSONBin(collection);
+        const data = await this.get(collection);
         const item = data.find(item => item.id === id);
         
         if (!item) {
