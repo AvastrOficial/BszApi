@@ -1,37 +1,360 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <title>MockAPI Server</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BszNubeAPI - Tu Mock Server</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; }
-        .endpoint { background: #f5f5f5; padding: 20px; margin: 10px 0; border-radius: 5px; }
-        code { background: #eee; padding: 2px 5px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .endpoints {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 10px;
+        }
+
+        .endpoint {
+            background: white;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .endpoint h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .endpoint code {
+            background: #f8f9fa;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            display: block;
+            margin: 10px 0;
+            border: 1px solid #e9ecef;
+        }
+
+        .endpoint p {
+            color: #6c757d;
+            line-height: 1.5;
+        }
+
+        .test-area {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 10px;
+        }
+
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .test-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        button.get { background: #27ae60; }
+        button.get:hover { background: #219a52; }
+
+        button.post { background: #f39c12; }
+        button.post:hover { background: #e67e22; }
+
+        button.put { background: #9b59b6; }
+        button.put:hover { background: #8e44ad; }
+
+        button.delete { background: #e74c3c; }
+        button.delete:hover { background: #c0392b; }
+
+        .result {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+            
+            .test-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>MockAPI Server</h1>
-    <p>API simulada usando GitHub Pages</p>
-    
-    <div class="endpoint">
-        <h3>GET /api/:collection</h3>
-        <code>await mockAPI.get('users')</code>
-    </div>
-    
-    <div class="endpoint">
-        <h3>POST /api/:collection</h3>
-        <code>await mockAPI.post('users', { name: 'John', email: 'john@example.com' })</code>
-    </div>
-    
-    <div class="endpoint">
-        <h3>PUT /api/:collection/:id</h3>
-        <code>await mockAPI.put('users', '123', { name: 'Jane' })</code>
-    </div>
-    
-    <div class="endpoint">
-        <h3>DELETE /api/:collection/:id</h3>
-        <code>await mockAPI.delete('users', '123')</code>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 BszNubeAPI</h1>
+            <p>Tu servidor Mock personalizado con JSONBin.io</p>
+        </div>
+
+        <div class="content">
+            <div class="endpoints">
+                <h2>📚 Endpoints Disponibles</h2>
+                
+                <div class="endpoint">
+                    <h3>📥 GET</h3>
+                    <code>await bszAPI.get('users')</code>
+                    <p>Obtener todos los registros de una colección</p>
+                </div>
+
+                <div class="endpoint">
+                    <h3>📤 POST</h3>
+                    <code>await bszAPI.post('users', { name: 'Juan', email: 'juan@example.com' })</code>
+                    <p>Crear nuevo registro (máximo 100 por colección)</p>
+                </div>
+
+                <div class="endpoint">
+                    <h3>✏️ PUT</h3>
+                    <code>await bszAPI.put('users', '123', { name: 'María' })</code>
+                    <p>Actualizar registro existente</p>
+                </div>
+
+                <div class="endpoint">
+                    <h3>🗑️ DELETE</h3>
+                    <code>await bszAPI.delete('users', '123')</code>
+                    <p>Eliminar registro por ID</p>
+                </div>
+
+                <div class="endpoint">
+                    <h3>🔍 GET por ID</h3>
+                    <code>await bszAPI.getById('users', '123')</code>
+                    <p>Obtener un registro específico</p>
+                </div>
+            </div>
+
+            <div class="test-area">
+                <h2>🧪 Probar la API</h2>
+                
+                <div class="test-section">
+                    <h3>Colección: Users</h3>
+                    <div class="test-buttons">
+                        <button class="get" onclick="testGet()">GET Users</button>
+                        <button class="post" onclick="testPost()">POST User</button>
+                        <button class="put" onclick="testPut()">PUT User</button>
+                        <button class="delete" onclick="testDelete()">DELETE User</button>
+                        <button class="get" onclick="testGetById()">GET por ID</button>
+                        <button onclick="clearResults()">Limpiar</button>
+                    </div>
+                </div>
+
+                <div id="status"></div>
+                <div class="result" id="result">Los resultados aparecerán aquí...</div>
+            </div>
+        </div>
     </div>
 
     <script src="scripts/api.js"></script>
+    <script>
+        // Función para mostrar estado
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+            setTimeout(() => statusDiv.innerHTML = '', 3000);
+        }
+
+        // Función para mostrar resultados
+        function showResult(data) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+        }
+
+        // Función para limpiar resultados
+        function clearResults() {
+            document.getElementById('result').textContent = 'Los resultados aparecerán aquí...';
+            document.getElementById('status').innerHTML = '';
+        }
+
+        // Funciones de prueba
+        async function testGet() {
+            try {
+                showStatus('Obteniendo usuarios...', 'success');
+                const users = await bszAPI.get('users');
+                showResult(users.length > 0 ? users : 'No hay usuarios registrados');
+            } catch (error) {
+                showStatus(`Error: ${error.message}`, 'error');
+                showResult(`Error: ${error.message}`);
+            }
+        }
+
+        async function testPost() {
+            try {
+                const newUser = {
+                    name: `Usuario-${Date.now()}`,
+                    email: `user${Date.now()}@example.com`,
+                    age: Math.floor(Math.random() * 50) + 18
+                };
+                
+                showStatus('Creando nuevo usuario...', 'success');
+                const result = await bszAPI.post('users', newUser);
+                showResult(result);
+            } catch (error) {
+                showStatus(`Error: ${error.message}`, 'error');
+                showResult(`Error: ${error.message}`);
+            }
+        }
+
+        async function testPut() {
+            try {
+                // Primero obtener un usuario para actualizar
+                const users = await bszAPI.get('users');
+                if (users.length === 0) {
+                    showStatus('Primero crea un usuario con POST', 'error');
+                    return;
+                }
+
+                const userToUpdate = users[0];
+                showStatus('Actualizando usuario...', 'success');
+                
+                const result = await bszAPI.put('users', userToUpdate.id, {
+                    name: `Actualizado-${Date.now()}`,
+                    updated: true
+                });
+                
+                showResult(result);
+            } catch (error) {
+                showStatus(`Error: ${error.message}`, 'error');
+                showResult(`Error: ${error.message}`);
+            }
+        }
+
+        async function testDelete() {
+            try {
+                const users = await bszAPI.get('users');
+                if (users.length === 0) {
+                    showStatus('No hay usuarios para eliminar', 'error');
+                    return;
+                }
+
+                const userToDelete = users[0];
+                showStatus('Eliminando usuario...', 'success');
+                
+                const result = await bszAPI.delete('users', userToDelete.id);
+                showResult(result);
+            } catch (error) {
+                showStatus(`Error: ${error.message}`, 'error');
+                showResult(`Error: ${error.message}`);
+            }
+        }
+
+        async function testGetById() {
+            try {
+                const users = await bszAPI.get('users');
+                if (users.length === 0) {
+                    showStatus('Primero crea un usuario con POST', 'error');
+                    return;
+                }
+
+                const user = users[0];
+                showStatus('Buscando usuario por ID...', 'success');
+                
+                const result = await bszAPI.getById('users', user.id);
+                showResult(result);
+            } catch (error) {
+                showStatus(`Error: ${error.message}`, 'error');
+                showResult(`Error: ${error.message}`);
+            }
+        }
+    </script>
 </body>
 </html>
