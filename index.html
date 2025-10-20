@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MockAPI Server</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .endpoint { background: #f5f5f5; padding: 20px; margin: 10px 0; border-radius: 5px; }
+        code { background: #eee; padding: 2px 5px; }
+    </style>
+</head>
+<body>
+    <h1>MockAPI Server</h1>
+    <p>API simulada usando GitHub Pages</p>
+    
+    <div class="endpoint">
+        <h3>GET /api/:collection</h3>
+        <code>await mockAPI.get('users')</code>
+    </div>
+    
+    <div class="endpoint">
+        <h3>POST /api/:collection</h3>
+        <code>await mockAPI.post('users', { name: 'John', email: 'john@example.com' })</code>
+    </div>
+    
+    <div class="endpoint">
+        <h3>PUT /api/:collection/:id</h3>
+        <code>await mockAPI.put('users', '123', { name: 'Jane' })</code>
+    </div>
+    
+    <div class="endpoint">
+        <h3>DELETE /api/:collection/:id</h3>
+        <code>await mockAPI.delete('users', '123')</code>
+    </div>
+
+    <script src="scripts/api.js"></script>
+</body>
+</html>
