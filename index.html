@@ -379,6 +379,96 @@
                 showResult(`Error: ${error.message}`);
             }
         }
+
+        // Nuevas funciones para JSON personalizados
+async function createCustomUser() {
+    try {
+        const customUser = {
+            "name": "AvaStrOficial",
+            "password": "avastr19",
+            "img": "https://files.catbox.moe/c3rzmt.gif",
+            "post-titulo": "null",
+            "guardarpost": [
+                {"post-titulo":"shido -  Usuario Projz - Amenazas","url":"https://bszdoxing.foroactivo.com/h22-visualizar?id=671d4af4e41b4d34e4494419"},
+                {"post-titulo":"Eid_eard_idk - Usuario Projz - Amenazas","url":"https://bszdoxing.foroactivo.com/h22-visualizar?id=671d4babad19ca34f8bf026f"},
+                // ... (todos tus posts)
+            ],
+            "seguidos": "0",
+            "seguidores": "0",
+            "nick-seguidos": "null",
+            "url-portada": "null",
+            "descripcionuser": "Fundador DE BSZ Y Creador De La App",
+            "etiquetasuser": "#Bsz",
+            "id": "1",
+            "guardarchats": [{"id-chats":"null","nombre-chats":"null","url-chats":"null"}],
+            "url-chats": "null",
+            "urlportada": "https://files.catbox.moe/q69xyy.jpg",
+            "guardartoolscamhack": [{"id-token":666,"gen-url":"https://appbsz.crearforo.net/h141-visualizadorcamhack?id=6744169ead19ca34f8cfd9dd"}],
+            "user_option": "user-password"
+        };
+
+        showStatus('Creando usuario personalizado...', 'success');
+        const result = await bszAPI.addCustomItem('users', customUser);
+        showResult(result);
+    } catch (error) {
+        showStatus(`Error: ${error.message}`, 'error');
+        showResult(`Error: ${error.message}`);
+    }
+}
+
+async function createCustomCollection() {
+    const collectionName = prompt('Nombre de la nueva colección:');
+    if (collectionName) {
+        try {
+            showStatus(`Creando colección ${collectionName}...`, 'success');
+            const result = await bszAPI.createCollection(collectionName);
+            showResult(result);
+        } catch (error) {
+            showStatus(`Error: ${error.message}`, 'error');
+            showResult(`Error: ${error.message}`);
+        }
+    }
+}
+
+async function showCollections() {
+    try {
+        showStatus('Obteniendo colecciones...', 'success');
+        const collections = await bszAPI.getCollections();
+        showResult(collections);
+    } catch (error) {
+        showStatus(`Error: ${error.message}`, 'error');
+        showResult(`Error: ${error.message}`);
+    }
+}
+
+async function addCustomJSON() {
+    const jsonInput = document.getElementById('jsonInput').value;
+    const collection = prompt('¿En qué colección quieres guardarlo?', 'customData');
+    
+    if (!jsonInput || !collection) return;
+
+    try {
+        const customData = JSON.parse(jsonInput);
+        showStatus('Agregando JSON personalizado...', 'success');
+        
+        // Si es un array, agregar múltiples items
+        if (Array.isArray(customData)) {
+            const result = await bszAPI.addMultipleItems(collection, customData);
+            showResult(result);
+        } else {
+            // Si es un objeto, agregar un solo item
+            const result = await bszAPI.addCustomItem(collection, customData);
+            showResult(result);
+        }
+    } catch (error) {
+        showStatus(`Error en el JSON: ${error.message}`, 'error');
+        showResult(`Error: ${error.message}`);
+    }
+}
+
+function clearJSON() {
+    document.getElementById('jsonInput').value = '';
+}
     </script>
 </body>
 </html>
